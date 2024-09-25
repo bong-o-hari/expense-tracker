@@ -31,6 +31,7 @@ func main() {
 	protected := router.Group("/admin")
 	protected.Use(middleware.AuthMiddleware())
 	protected.GET("/current", controllers.CurrentUser)
+	protected.GET("/categories", controllers.ListAllCategories)
 
 	router.Run(":8000")
 }

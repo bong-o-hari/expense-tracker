@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"expensetracker/models"
 	"net/http"
 
@@ -24,4 +25,15 @@ func AddNewCategory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": errsave.Error()})
 		return
 	}
+}
+
+func ListAllCategories(c *gin.Context) {
+	var cat []models.Category
+	ctx := context.Background()
+	err := models.DB.NewSelect().Model(&cat).Scan(ctx)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "success", "data": cat})
 }
