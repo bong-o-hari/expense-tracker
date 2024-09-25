@@ -16,6 +16,9 @@ type User struct {
 	Password  string    `bun:"password,notnull" json:"-"`
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 	UpdatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"updatedAt"`
+
+	// Relation to Expenses
+	Expenses []Expense `bun:"rel:has-many,join:id=user_id"`
 }
 
 func (u *User) SaveUser() (*User, error) {

@@ -33,6 +33,20 @@ func ConnectDatabase() {
 	}
 	log.Println(res)
 
+	res, err = DB.NewCreateTable().Model((*Category)(nil)).IfNotExists().Exec(ctx)
+	if err != nil {
+		log.Println("Failed to create table.", err)
+		return
+	}
+	log.Println(res)
+
+	res, err = DB.NewCreateTable().Model((*Expense)(nil)).IfNotExists().Exec(ctx)
+	if err != nil {
+		log.Println("Failed to create table.", err)
+		return
+	}
+	log.Println(res)
+
 	// ping db to check active connection
 	err = DB.Ping()
 	if err != nil {
