@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	passwordhashing "expensetracker/hashing"
 	"expensetracker/models"
 
 	"golang.org/x/crypto/bcrypt"
@@ -19,7 +18,7 @@ func LoginCheck(email string, password string) (string, error) {
 		return "", err
 	}
 
-	check := passwordhashing.VerifyPassword(password, u.Password)
+	check := VerifyPassword(password, u.Password)
 
 	if !check {
 		return "", bcrypt.ErrMismatchedHashAndPassword

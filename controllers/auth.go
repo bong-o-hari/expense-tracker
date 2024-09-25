@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	passwordhashing "expensetracker/hashing"
 	"expensetracker/models"
 	"expensetracker/utils"
 	"log"
@@ -35,7 +34,7 @@ func RegisterUser(c *gin.Context) {
 	u.Name = input.Name
 	u.Email = input.Email
 
-	hash, errhash := passwordhashing.HashPassword(input.Password)
+	hash, errhash := utils.HashPassword(input.Password)
 	if errhash != nil {
 		log.Println("Error while hashing password", errhash)
 		return
