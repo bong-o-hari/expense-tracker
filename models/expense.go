@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -20,4 +21,12 @@ type Expense struct {
 	// Relations
 	User     *User     `bun:"rel:belongs-to,join:user_id=id"`
 	Category *Category `bun:"rel:belongs-to,join:category_id=id"`
+}
+
+func CreateExpenseTable() {
+	_, err := DB.NewCreateTable().Model((*Expense)(nil)).IfNotExists().Exec(ctx)
+	if err != nil {
+		log.Println("Failed to create table.", err)
+		return
+	}
 }

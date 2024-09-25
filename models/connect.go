@@ -13,10 +13,10 @@ import (
 )
 
 var DB *bun.DB
+var ctx = context.Background()
 
 func ConnectDatabase() {
 	err := godotenv.Load()
-	ctx := context.Background()
 
 	if err != nil {
 		log.Fatal(err)
@@ -25,27 +25,12 @@ func ConnectDatabase() {
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(os.Getenv("DSN"))))
 	DB = bun.NewDB(sqldb, pgdialect.New())
 
-	// reflecting tables to DB
-	res, err := DB.NewCreateTable().Model((*User)(nil)).IfNotExists().Exec(ctx)
-	if err != nil {
-		log.Println("Failed to create table.", err)
-		return
-	}
-	log.Println(res)
-
-	res, err = DB.NewCreateTable().Model((*Category)(nil)).IfNotExists().Exec(ctx)
-	if err != nil {
-		log.Println("Failed to create table.", err)
-		return
-	}
-	log.Println(res)
-
-	res, err = DB.NewCreateTable().Model((*Expense)(nil)).IfNotExists().Exec(ctx)
-	if err != nil {
-		log.Println("Failed to create table.", err)
-		return
-	}
-	log.Println(res)
+	// reflecting User to DB
+	CreateUserTable()
+	// reflecting Category to DB
+	CreateAndPrefillCategoryTable()
+	// reflecting Expense to DB
+	CreateExpenseTable()
 
 	// ping db to check active connection
 	err = DB.Ping()

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"context"
+	"log"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -22,11 +22,18 @@ type User struct {
 }
 
 func (u *User) SaveUser() (*User, error) {
-	ctx := context.Background()
 	_, err := DB.NewInsert().Model(u).Exec(ctx)
 
 	if err != nil {
 		return &User{}, err
 	}
 	return u, nil
+}
+
+func CreateUserTable() {
+	_, err := DB.NewCreateTable().Model((*User)(nil)).IfNotExists().Exec(ctx)
+	if err != nil {
+		log.Println("Failed to create table.", err)
+		return
+	}
 }
