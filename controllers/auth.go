@@ -3,7 +3,7 @@ package controllers
 import (
 	passwordhashing "expensetracker/hashing"
 	"expensetracker/models"
-	"expensetracker/utils/token"
+	"expensetracker/utils"
 	"log"
 	"net/http"
 
@@ -65,7 +65,7 @@ func LoginUser(c *gin.Context) {
 	u.Email = input.Email
 	u.Password = input.Password
 
-	token, err := models.LoginCheck(u.Email, u.Password)
+	token, err := utils.LoginCheck(u.Email, u.Password)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or Password incorrect."})
@@ -76,13 +76,13 @@ func LoginUser(c *gin.Context) {
 }
 
 func CurrentUser(c *gin.Context) {
-	user_id, err := token.ExtractTokenID(c)
+	user_id, err := utils.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	u, err := models.GetUserByID(user_id)
+	u, err := utils.GetUserByID(user_id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
