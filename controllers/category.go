@@ -8,23 +8,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Category struct {
-	CategoryName string `json:"category_name"`
+type NewCategory struct {
+	CategoryName string `json:"category_name" binding:"required"`
 }
 
 func AddNewCategory(c *gin.Context) {
-	var input Category
+	var input NewCategory
 
-	cat := &models.Category{}
+	cat := models.Category{}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	cat.CategoryName = input.CategoryName
 
-	_, errsave := cat.SaveCategory()
+	_, err := cat.SaveCategory()
 
-	if errsave != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errsave.Error()})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.JSON(201, gin.H{"status": "Successfully added new category!"})
 }
 
 func ListAllCategories(c *gin.Context) {

@@ -32,6 +32,7 @@ func main() {
 	protected.Use(middleware.AuthMiddleware())
 	protected.GET("/current", controllers.CurrentUser)
 	protected.GET("/categories", controllers.ListAllCategories)
+	protected.POST("/category/new", controllers.AddNewCategory)
 
 	router.Run(":8000")
 }
