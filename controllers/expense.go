@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"expensetracker/models"
 	"expensetracker/utils"
 	"net/http"
@@ -49,4 +50,20 @@ func AddNewExpense(c *gin.Context) {
 	}
 
 	c.JSON(201, gin.H{"status": "Successfully added your expense!"})
+}
+
+func ListAllExpenses(c *gin.Context) {
+	var expense []models.Expense
+	ctx := context.Background()
+	user_id, err := utils.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+
+	err = models.DB.NewSelect().Model(&expense).Relation("Category").Where("user_id = ?", user_id).Scan(ctx)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "success", "data": expense})
 }
