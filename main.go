@@ -33,6 +33,7 @@ func main() {
 	protected.GET("/current", controllers.CurrentUser)
 	protected.GET("/categories", controllers.ListAllCategories)
 	protected.POST("/category/new", controllers.AddNewCategory)
+	protected.POST("/expense/new", controllers.AddNewExpense)
 
 	router.Run(":8000")
 }

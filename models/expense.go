@@ -30,3 +30,12 @@ func CreateExpenseTable() {
 		return
 	}
 }
+
+func (expense *Expense) SaveExpense() (*Expense, error) {
+	_, err := DB.NewInsert().Model(expense).Exec(ctx)
+
+	if err != nil {
+		return &Expense{}, err
+	}
+	return expense, nil
+}
