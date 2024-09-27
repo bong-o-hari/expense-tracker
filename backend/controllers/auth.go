@@ -43,12 +43,18 @@ func RegisterUser(c *gin.Context) {
 
 	_, errsave := u.SaveUser()
 
+	// create token at register
+	token, err := utils.LoginCheck(u.Email, input.Password)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
 	if errsave != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": errsave.Error()})
 		return
 	}
 
-	c.JSON(201, gin.H{"status": "Successfully registered!"})
+	c.JSON(201, gin.H{"status": "Successfully registered!", "token": token})
 }
 
 func LoginUser(c *gin.Context) {
