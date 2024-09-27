@@ -10,7 +10,7 @@ import (
 )
 
 type RegisterInput struct {
-	Name     string `json:"name" binding:"required"`
+	Username string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
@@ -31,7 +31,7 @@ func RegisterUser(c *gin.Context) {
 
 	u := models.User{}
 
-	u.Name = input.Name
+	u.Username = input.Username
 	u.Email = input.Email
 
 	hash, errhash := utils.HashPassword(input.Password)
