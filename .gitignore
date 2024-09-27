@@ -103,4 +103,16 @@ frontend/*.lock
 frontend/.env
 frontend/.env.local
 frontend/.env.production
-frontend/.env.development
+frontend/.env.
+
+# Yarn 2+ (Plug'n'Play) related files
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Cache should be ignored
+.yarn/cache
