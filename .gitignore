@@ -23,3 +23,84 @@ go.work.sum
 
 # env file
 .env
+
+# Node modules in both frontend and backend
+node_modules/
+frontend/node_modules/
+
+# Yarn lock and error logs
+yarn.lock
+frontend/yarn.lock
+yarn-error.log
+frontend/yarn-error.log
+npm-debug.*
+
+# Logs
+*.log
+frontend/*.log
+
+# macOS System files
+.DS_Store
+frontend/.DS_Store
+
+# Android build artifacts
+frontend/android/.gradle
+frontend/android/app/build
+frontend/android/app/.cxx
+frontend/android/app/libs
+frontend/android/local.properties
+frontend/android/**/build/
+frontend/android/app/src/main/jniLibs
+*.keystore
+
+# iOS build artifacts
+frontend/ios/Pods
+frontend/ios/Podfile.lock
+frontend/ios/build/
+frontend/ios/DerivedData/
+frontend/*.mode1v3
+frontend/*.pbxuser
+frontend/xuserdata
+frontend/*.xcuserdatad
+frontend/*.xcscmblueprint
+
+# Xcode project files (keep essential)
+frontend/*.xcodeproj/*
+!frontend/*.xcodeproj/project.pbxproj
+!frontend/*.xcodeproj/xcshareddata
+!frontend/*.xcodeproj/xcshareddata/**
+frontend/*.xcworkspace/*
+!frontend/*.xcworkspace/contents.xcworkspacedata
+!frontend/*.xcworkspace/xcshareddata
+!frontend/*.xcworkspace/xcshareddata/**
+
+# fastlane (if used for release)
+frontend/fastlane/report.xml
+frontend/fastlane/Preview.html
+frontend/fastlane/screenshots
+frontend/fastlane/test_output
+frontend/fastlane/tests_output
+
+# Bundle artifacts
+frontend/*.jsbundle
+
+# Expo (if using Expo)
+frontend/.expo
+frontend/.expo-shared
+
+# Build output (for APK or AAB)
+frontend/build/
+frontend/*.apk
+frontend/*.aab
+
+# Temporary files
+frontend/.temp/
+frontend/*.tmp
+frontend/.tmp/
+frontend/*.lock
+
+# dotenv (API keys, secrets)
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
