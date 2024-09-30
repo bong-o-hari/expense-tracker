@@ -28,7 +28,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 			const data = await response.json();
 			console.log(response);
 			if (response.ok) {
-				Alert.alert(`${data.status}`);
+				Alert.alert("Login Success!");
 				const token = data.token;
 				// Save the token in AsyncStorage
 				await AsyncStorage.setItem('@auth_token', token);
