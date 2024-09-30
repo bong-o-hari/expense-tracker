@@ -17,7 +17,7 @@ type Category struct {
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 
 	// Relation to Expenses
-	Expenses []Expense `bun:"rel:has-many,join:id=category_id"`
+	Expenses []Expense `bun:"rel:has-many,join:id=category_id" json:"expenses"`
 }
 
 func (cat *Category) SaveCategory() (*Category, error) {
