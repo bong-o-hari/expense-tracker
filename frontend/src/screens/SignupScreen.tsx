@@ -27,7 +27,6 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
 				body: JSON.stringify({ username, email, password }),
 			});
 			const data = await response.json();
-			console.log(response);
 			if (response.ok) {
 				Alert.alert(`${data.status}`);
 				const token = data.token;
@@ -38,7 +37,6 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
 				Alert.alert('Signup Failed!', data.error)
 			}
 		} catch (err) {
-			console.log(err);
 			Alert.alert('Error', 'Something went wrong, please try again.');
 		}
 	};

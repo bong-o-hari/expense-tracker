@@ -1,87 +1,84 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TextInput, Button, FlatList } from 'react-native';
 import ExpenseItem from '../components/ExpenseComponent';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '@env';
+import ExpenseModal from '../components/AddExpenseModal';
+import { fetchExpenses, fetchCategories, submitExpense } from '../Apis';
+
+interface Expense {
+  id: number;
+  amount: number;
+  description: string;
+  expense_date: string;
+  category: {
+    id: number;
+    category_name: string;
+  };
+}
 
 interface Category {
   id: number;
   category_name: string;
 }
 
-interface Expense {
-  id: number;
-  category: Category;
-  amount: number;
-  expense_date: string;
-  description: string;
-}
-
-interface ApiResponse {
-  data: Expense[];
-  message: string;
-}
-
 const HomeScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newExpense, setNewExpense] = useState({ category_id: 0, amount: 0, description: '', expense_date: '' });
 
-  const fetchExpenses = async () => {
+  useEffect(() => {
+    const loadExpenses = async () => {
+      const response = await fetchExpenses();
+      setExpenses(response.data);
+    };
+
+    const loadCategories = async () => {
+      const response = await fetchCategories();
+      setCategories(response.data);
+    };
+
+    loadExpenses();
+    loadCategories();
+  }, []);
+
+  const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
     try {
-      const token = await AsyncStorage.getItem('@auth_token')
-      const response = await fetch(`${API_URL}admin/expenses`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data: ApiResponse = await response.json();
-        setExpenses(data.data);
-        setLoading(false);
-      } else {
-        let res = await response.json()
-        console.log(res);
-        Alert.alert('Error', 'Something went wrong, please try again.');
-      }
+      setNewExpense(expense);
+      await submitExpense(newExpense);
+      setModalVisible(false);
+      // Reload expenses after submission
+      const response = await fetchExpenses();
+      setExpenses(response.data);
     } catch (error) {
-      console.error('Failed to fetch expenses', error);
-      setLoading(false);
+      console.error("Error adding expense:", error);
     }
   };
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-  if (loading) {
-    return <ActivityIndicator size="large" color="#0000ff" />;
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Expenses List</Text>
+    <View style={{ flex: 1, padding: 16 }}>
+      {/* Header with "+" button */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'black' }}>Expenses List</Text>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <Text style={{ fontSize: 40, fontWeight: 'bold', color: 'gray' }}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Expenses List */}
       <FlatList
         data={expenses}
-        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <ExpenseItem expense={item} />}
+        keyExtractor={(item) => item.id.toString()}
+      />
+
+      <ExpenseModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleAddExpense}
+        categories={categories}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-    color: 'black'
-  },
-});
 
 export default HomeScreen;

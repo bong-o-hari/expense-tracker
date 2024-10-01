@@ -26,7 +26,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 				body: JSON.stringify({ email, password }),
 			});
 			const data = await response.json();
-			console.log(response);
 			if (response.ok) {
 				const token = data.token;
 				// Save the token in AsyncStorage
@@ -36,7 +35,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 				Alert.alert('Login Failed!', data.error)
 			}
 		} catch (err) {
-			console.log(err);
 			Alert.alert('Error', 'Something went wrong, please try again.');
 		}
 	};
