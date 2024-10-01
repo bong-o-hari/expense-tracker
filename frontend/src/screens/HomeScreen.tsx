@@ -43,6 +43,7 @@ const HomeScreen: React.FC = () => {
 
   const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
     try {
+      console.log(newExpense)
       setNewExpense(expense);
       await submitExpense(newExpense);
       setModalVisible(false);
