@@ -56,8 +56,8 @@ const HomeScreen: React.FC = () => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchExpenses().then((expense) => {
-      setExpenses(expense.data);
+    fetchExpenses().then((expenses) => {
+      setExpenses(expenses.data);
       setRefreshing(false);
     });
   }, []);
