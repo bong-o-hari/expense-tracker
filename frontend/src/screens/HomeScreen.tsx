@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, Button, FlatList } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
 import ExpenseItem from '../components/ExpenseComponent';
 import ExpenseModal from '../components/AddExpenseModal';
 import { fetchExpenses, fetchCategories, submitExpense } from '../Apis';
@@ -25,6 +25,7 @@ const HomeScreen: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newExpense, setNewExpense] = useState({ category_id: 0, amount: 0, description: '', expense_date: '' });
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const loadExpenses = async () => {
@@ -43,18 +44,27 @@ const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     const submitExpenseOnChange = async () => {
-      await submitExpense(newExpense);
-      // Reload expenses after submission
-      const response = await fetchExpenses();
-      setExpenses(response.data);
+      if (newExpense.category_id != 0) {
+        await submitExpense(newExpense);
+        // Reload expenses after submission
+        const response = await fetchExpenses();
+        setExpenses(response.data);
+      }
     }
     submitExpenseOnChange();
   }, [newExpense]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchExpenses().then((expense) => {
+      setExpenses(expense.data);
+      setRefreshing(false);
+    });
+  }, []);
+
   const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
     try {
       setNewExpense(expense);
-      // await submitExpense(newExpense);
       setModalVisible(false);
     } catch (error) {
       console.error("Error adding expense:", error);
@@ -76,6 +86,9 @@ const HomeScreen: React.FC = () => {
         data={expenses}
         renderItem={({ item }) => <ExpenseItem expense={item} />}
         keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
 
       <ExpenseModal
