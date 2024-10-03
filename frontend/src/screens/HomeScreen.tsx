@@ -41,15 +41,21 @@ const HomeScreen: React.FC = () => {
     loadCategories();
   }, []);
 
-  const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
-    try {
-      console.log(newExpense)
-      setNewExpense(expense);
+  useEffect(() => {
+    const submitExpenseOnChange = async () => {
       await submitExpense(newExpense);
-      setModalVisible(false);
       // Reload expenses after submission
       const response = await fetchExpenses();
       setExpenses(response.data);
+    }
+    submitExpenseOnChange();
+  }, [newExpense]);
+
+  const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
+    try {
+      setNewExpense(expense);
+      // await submitExpense(newExpense);
+      setModalVisible(false);
     } catch (error) {
       console.error("Error adding expense:", error);
     }
