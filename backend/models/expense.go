@@ -17,6 +17,7 @@ type Expense struct {
 	Description string    `bun:"description,nullzero" json:"description"`
 	ExpenseDate time.Time `bun:"expense_date,notnull" json:"expense_date"`
 	CreatedAt   time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
+	DeletedAt   time.Time `bun:"deleted_at,soft_delete,nullzero" json:"-"`
 
 	// Relations
 	User     *User     `bun:"rel:belongs-to,join:user_id=id" json:"-"`

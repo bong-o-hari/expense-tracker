@@ -3,6 +3,7 @@ package main
 import (
 	"expensetracker/controllers"
 	middleware "expensetracker/middlewares"
+	"expensetracker/migrations"
 	"expensetracker/models"
 	"fmt"
 
@@ -13,6 +14,7 @@ func main() {
 	fmt.Println("Expense Tracker")
 
 	models.ConnectDatabase()
+	migrations.RunMigrations()
 
 	router := gin.Default()
 	router.Use(middleware.LoggerMiddleware())
