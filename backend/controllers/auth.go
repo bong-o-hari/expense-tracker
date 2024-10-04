@@ -47,6 +47,7 @@ func RegisterUser(c *gin.Context) {
 	token, err := utils.LoginCheck(u.Email, input.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	if errsave != nil {
@@ -90,6 +91,7 @@ func CurrentUser(c *gin.Context) {
 	u, err := utils.GetUserByID(user_id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "success", "data": u})

@@ -37,6 +37,7 @@ func main() {
 	protected.POST("/category/new", controllers.AddNewCategory)
 	protected.GET("/expenses", controllers.ListAllExpenses)
 	protected.POST("/expense/new", controllers.AddNewExpense)
+	protected.DELETE("/expense", controllers.SoftDeleteExpense)
 
 	router.Run(":8000")
 }

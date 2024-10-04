@@ -49,7 +49,20 @@ func AddNewExpense(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"status": "Successfully added your expense!"})
+	c.JSON(http.StatusOK, gin.H{"status": "Successfully added your expense!"})
+}
+
+func SoftDeleteExpense(c *gin.Context) {
+	expense := models.Expense{}
+	expenseId := c.Query("id")
+	ctx := context.Background()
+	_, err := models.DB.NewDelete().Model(&expense).Where("id = ?", expenseId).Exec(ctx)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted expense."})
 }
 
 func ListAllExpenses(c *gin.Context) {
@@ -58,12 +71,14 @@ func ListAllExpenses(c *gin.Context) {
 	user_id, err := utils.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	err = models.DB.NewSelect().Model(&expense).Relation("Category").Where("user_id = ?", user_id).Scan(ctx)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "success", "data": expense})
 }
