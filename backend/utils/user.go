@@ -33,7 +33,7 @@ func LoginCheck(email string, password string) (string, error) {
 	return token, nil
 }
 
-func GetUserByID(user_id uint) (models.User, error) {
+func GetUserByID(user_id int) (models.User, error) {
 	var u models.User
 	ctx := context.Background()
 	err := models.DB.NewSelect().Model(&u).Where("id = ?", user_id).Scan(ctx)

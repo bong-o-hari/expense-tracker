@@ -66,19 +66,19 @@ func SoftDeleteExpense(c *gin.Context) {
 }
 
 func ListAllExpenses(c *gin.Context) {
-	var expense []models.Expense
-	ctx := context.Background()
 	user_id, err := utils.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = models.DB.NewSelect().Model(&expense).Relation("Category").Where("user_id = ?", user_id).Scan(ctx)
+	month := c.Query("month")
+	year := c.Query("year")
+	expenses, err := models.FilterExpenseByMonthAndYear(user_id, month, year)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": expense})
+	c.JSON(http.StatusOK, gin.H{"message": "success", "data": expenses})
 }
