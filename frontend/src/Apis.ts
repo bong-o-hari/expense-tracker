@@ -21,7 +21,6 @@ export const fetchCategories = async () => {
 
 export const submitExpense = async (expenseData: { category_id: number, amount: number, description: string, expense_date: string }) => {
   const token = await AsyncStorage.getItem('@auth_token');
-  console.log(expenseData)
   const response = await fetch(`${API_URL}admin/expense/new`, {
     method: 'POST',
     headers: {
