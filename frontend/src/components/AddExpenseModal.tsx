@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface ExpenseModalProps {
   visible: boolean;
@@ -21,8 +22,6 @@ interface ExpenseModalProps {
   categories: { id: number; category_name: string }[];
 }
 
-const monthSmall = [4, 6, 9, 11]
-
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
   visible,
   onClose,
@@ -32,67 +31,30 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [expenseDate, setExpenseDate] = useState('');
+  const [expenseDate, setExpenseDate] = useState(new Date()); // Set to today's date
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const convertDateFormat = (date: string) => {
-    const [day, month, year] = date.split('-');
+  const convertDateFormat = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-based
+    const year = date.getFullYear();
     return `${year}-${month}-${day}`; // Converts to YYYY-MM-DD
   };
 
-  const handleAutoFormatDate = (date: string) => {
-    if (date.length == 1) {
-      // date cannot start with bigger than 3
-      if (Number(date) > 3) {
-        date = '3';
-      }
-      setExpenseDate(date);
-    }
-    if (date.length == 2) {
-      // date cannot be greater than 31
-      if (Number(date) > 31) {
-        date = '31';
-      }
-      date += '-';
-      setExpenseDate(date);
-    }
-    if (date.length == 4) {
-      let [day, month] = date.split('-')
-      // month cannot start with greater than 1
-      if (Number(month) > 1) {
-        month = '1';
-        date = day + '-' + month
-      }
-      setExpenseDate(date);
-    }
-    if (date.length == 5) {
-      let [day, month] = date.split('-')
-      if (Number(month) > 12) {
-        month = '12';
-        date = day + '-' + month
-      }
-      if (monthSmall.includes(Number(month)) && Number(day) > 30) {
-        date = '30-' + month
-      }
-      if (Number(month) == 2 && Number(day) > 28) {
-        date = '28-' + month
-      }
-      date += '-'
-    }
-    setExpenseDate(date);
+  const handleShowDatePicker = () => {
+    setShowDatePicker(true);
   };
 
-  const handleBackspace = (text: string) => {
-    // Check if the last character was a hyphen
-    if (text.endsWith('-')) {
-      setExpenseDate(expenseDate.slice(0, -1)); // Remove the last character if it's a hyphen
-    } else {
-      setExpenseDate(expenseDate.slice(0, -1)); // Remove the last character
+  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setExpenseDate(selectedDate);
     }
   };
 
   const handleAddExpense = () => {
-    if (categoryId && amount && description && expenseDate) {
-      const formattedDate = convertDateFormat(expenseDate)
+    if (categoryId && amount && description) {
+      const formattedDate = convertDateFormat(expenseDate);
       onSubmit({
         category_id: categoryId,
         amount: parseFloat(amount),
@@ -103,7 +65,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       setCategoryId(null);
       setAmount('');
       setDescription('');
-      setExpenseDate('');
+      setExpenseDate(new Date()); // Reset to today's date
       onClose(); // Close the modal
     } else {
       alert('Please fill in all fields');
@@ -167,24 +129,22 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
             />
           </View>
 
-          {/* Expense Date input */}
+          {/* Expense Date Picker */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Expense Date:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Date (DD-MM-YYYY)"
-              placeholderTextColor="#888"
-              value={expenseDate}
-              onChangeText={(text) => {
-                if (text.length < expenseDate.length) {
-                  handleBackspace(text);
-                } else {
-                  handleAutoFormatDate(text);
-                }
-              }}
-              keyboardType='numeric'
-              maxLength={10}
-            />
+            <Pressable style={styles.input} onPress={handleShowDatePicker}>
+              <Text style={{ color: 'black' }}>
+                {expenseDate ? expenseDate.toLocaleDateString() : 'Select a date'}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
+              <DateTimePicker
+                value={expenseDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
           </View>
 
           {/* Action buttons */}
@@ -237,7 +197,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     width: '100%',
-    color: 'black'
+    color: 'black',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pickerContainer: {
     borderWidth: 1,
