@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Alert, View, TextInput, StyleSheet, Text } from 'react-native';
+import GoogleLoginButton from '../components/GoogleLoginComponent';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@env';
 
@@ -59,6 +60,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 			/>
 			<Button title="Log In" onPress={handleLogin} />
 			<Text style={styles.text} onPress={() => navigation.navigate('Signup')}>New here? Go to Signup</Text>
+			<GoogleLoginButton navigation={navigation} />
 		</View>
 	);
 };
