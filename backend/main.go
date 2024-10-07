@@ -28,6 +28,7 @@ func main() {
 	user := router.Group("/user")
 	user.POST("/register", controllers.RegisterUser)
 	user.POST("/login", controllers.LoginUser)
+	user.POST("/google/login", controllers.GoogleLogin)
 
 	// Protected APIs
 	protected := router.Group("/admin")

@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -9,6 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/joho/godotenv"
+	"google.golang.org/api/idtoken"
 )
 
 func GenerateToken(user_id int) (string, error) {
@@ -78,4 +82,23 @@ func ExtractTokenID(c *gin.Context) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// VerifyGoogleIDToken verifies the ID token and returns the token information
+func VerifyGoogleIDToken(idToken string) (map[string]interface{}, error) {
+	err := godotenv.Load("../.env")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	// You should pass your Google Client ID here
+	clientID := os.Getenv("GOOGLE_CLIENT_ID")
+
+	// Verify the ID token using Google's public keys
+	payload, err := idtoken.Validate(context.Background(), idToken, clientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate ID token: %v", err)
+	}
+
+	return payload.Claims, nil
 }
