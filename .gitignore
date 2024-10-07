@@ -49,6 +49,9 @@ frontend/android/app/build
 frontend/android/app/.cxx
 frontend/android/app/libs
 frontend/android/local.properties
+frontend/android/app/src/main/assets/config.properties
+frontend/android/app/config.properties
+frontend/android/config.properties
 frontend/android/**/build/
 frontend/android/app/src/main/jniLibs
 *.keystore
