@@ -3,7 +3,6 @@ package controllers
 import (
 	"expensetracker/models"
 	"expensetracker/utils"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -93,7 +92,7 @@ func GoogleLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	fmt.Println("Input", input)
+
 	if input.Token == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID token missing"})
 		return
@@ -108,8 +107,8 @@ func GoogleLogin(c *gin.Context) {
 	}
 
 	// Extract email from userInfo (you can also store user info in the DB)
-	email := tokenInfo["email"].(string)
-	name := tokenInfo["name"].(string)
+	email := tokenInfo.Claims["email"].(string)
+	name := tokenInfo.Claims["name"].(string)
 
 	user, err := models.GetOrCreateUser(email, name, 0)
 	if err != nil {
