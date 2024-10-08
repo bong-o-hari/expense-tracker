@@ -17,8 +17,10 @@ const GoogleLoginButton: React.FC<Props> = ({ navigation }) => {
   // Configure Google Signin
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: GOOGLE_CLIENT_ID,  // Your web client ID from Google Cloud
-      offlineAccess: true, // Set to true if you need a refresh token (optional)
+      webClientId: GOOGLE_CLIENT_ID,
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+      scopes: ['profile', 'email'],
     });
   }, []);
 
@@ -30,14 +32,9 @@ const GoogleLoginButton: React.FC<Props> = ({ navigation }) => {
 
       // Sign in with Google
       const userInfo: SignInResponse = await GoogleSignin.signIn();
-      console.log("User Info:", userInfo);
 
       // Get the ID token and user information from Google login
       const idToken = userInfo.data?.idToken; // Directly use idToken from userInfo
-      const userProfile = userInfo.data?.user; // Get user profile information
-
-      // Log user profile info (optional for debugging)
-      console.log('User Profile:', userProfile);
 
       // Send the token to the backend to exchange for a server-side session token
       const response = await fetch(`${API_URL}user/google/login`, {
@@ -55,7 +52,7 @@ const GoogleLoginButton: React.FC<Props> = ({ navigation }) => {
         await AsyncStorage.setItem('@auth_token', token);
         navigation.navigate('Home');
       } else {
-        Alert.alert('Login Failed!', data.error);
+        Alert.alert('Login Failed!');
       }
     } catch (error) {
       const err = error as { code: string };
@@ -66,7 +63,6 @@ const GoogleLoginButton: React.FC<Props> = ({ navigation }) => {
       } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert('Google Play Services not available');
       } else {
-        console.log(error);
         Alert.alert('Error', 'Something went wrong. Please try again.');
       }
     } finally {
