@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	"github.com/joho/godotenv"
 	"google.golang.org/api/idtoken"
 )
 
@@ -84,21 +83,32 @@ func ExtractTokenID(c *gin.Context) (int, error) {
 	return 0, nil
 }
 
-// VerifyGoogleIDToken verifies the ID token and returns the token information
-func VerifyGoogleIDToken(idToken string) (map[string]interface{}, error) {
-	err := godotenv.Load("../.env")
-
+func VerifyGoogleIDToken(idToken string) (*idtoken.Payload, error) {
+	// Verify the token (use one audience first for the initial check)
+	payload, err := idtoken.Validate(context.Background(), idToken, os.Getenv("GOOGLE_CLIENT_ID"))
 	if err != nil {
-		log.Fatal(err)
-	}
-	// You should pass your Google Client ID here
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-
-	// Verify the ID token using Google's public keys
-	payload, err := idtoken.Validate(context.Background(), idToken, clientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate ID token: %v", err)
+		log.Println("Error validating token:", err)
+		return nil, err
 	}
 
-	return payload.Claims, nil
+	// Check if the 'aud' claim matches one of the expected audiences
+	validAudiences := []string{
+		os.Getenv("GOOGLE_CLIENT_ID"),     // Android Client ID
+		os.Getenv("GOOGLE_WEB_CLIENT_ID"), // Web Client ID
+	}
+
+	// Verify the audience claim
+	isValidAudience := false
+	for _, aud := range validAudiences {
+		if payload.Audience == aud {
+			isValidAudience = true
+			break
+		}
+	}
+
+	if !isValidAudience {
+		return nil, fmt.Errorf("audience provided does not match any of the valid audiences")
+	}
+
+	return payload, nil
 }
