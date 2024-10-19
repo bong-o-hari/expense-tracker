@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"context"
 	"expensetracker/models"
+	"expensetracker/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -22,10 +22,16 @@ func AddNewCategory(c *gin.Context) {
 		return
 	}
 
+	user_id, err := utils.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	cat.CategoryName = input.CategoryName
+	cat.UserID = int64(user_id)
 
-	_, err := cat.SaveCategory()
-
+	_, err = cat.SaveCategory()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -35,9 +41,13 @@ func AddNewCategory(c *gin.Context) {
 }
 
 func ListAllCategories(c *gin.Context) {
-	var cat []models.Category
-	ctx := context.Background()
-	err := models.DB.NewSelect().Model(&cat).Scan(ctx)
+	user_id, err := utils.ExtractTokenID(c)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	cat, err := models.ListCategories(user_id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
