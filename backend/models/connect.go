@@ -32,7 +32,7 @@ func ConnectDatabase() {
 	CreateExpenseTable()
 
 	// ping db to check active connection
-	err = DB.Ping()
+	err := DB.Ping()
 	if err != nil {
 		log.Println("Failed to connect to database.", err)
 		return
