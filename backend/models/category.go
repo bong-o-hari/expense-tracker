@@ -11,13 +11,14 @@ import (
 type Category struct {
 	bun.BaseModel `bun:"table:categories"`
 
-	ID           int64  `bun:"id,pk,autoincrement" json:"id"`
-	CategoryName string `bun:"categoryname,notnull" json:"category_name"`
-	// Description  string    `bun:"description" json:"description"`
-	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
+	ID           int64     `bun:"id,pk,autoincrement" json:"id"`
+	CategoryName string    `bun:"categoryname,notnull" json:"category_name"`
+	UserID       int64     `bun:"user_id,notnull,default:0" json:"user_id"`
+	CreatedAt    time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 
-	// Relation to Expenses
+	// Relations
 	Expenses []Expense `bun:"rel:has-many,join:id=category_id" json:"expenses"`
+	User     *User     `bun:"rel:belongs-to,join:user_id=id" json:"user"`
 }
 
 func (cat *Category) SaveCategory() (*Category, error) {
@@ -70,4 +71,15 @@ func CreateAndPrefillCategoryTable() {
 
 		fmt.Println("Category table created and filled with default data.")
 	}
+}
+
+func ListCategories(user_id int) ([]Category, error) {
+	var cat []Category
+	err := DB.NewSelect().Model(&cat).Where("user_id = ?", user_id).WhereOr("user_id = ?", 0).Scan(ctx)
+
+	if err != nil {
+		log.Println("Error fetching categories", err)
+		return nil, err
+	}
+	return cat, nil
 }

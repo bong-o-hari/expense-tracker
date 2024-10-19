@@ -17,8 +17,9 @@ type User struct {
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 	UpdatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"updatedAt"`
 
-	// Relation to Expenses
-	Expenses []Expense `bun:"rel:has-many,join:id=user_id"`
+	// Relations
+	Categories []Category `bun:"rel:has-many,join:id=user_id"`
+	Expenses   []Expense  `bun:"rel:has-many,join:id=user_id"`
 }
 
 func (u *User) SaveUser() (*User, error) {
