@@ -16,7 +16,7 @@ var DB *bun.DB
 var ctx = context.Background()
 
 func ConnectDatabase() {
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 
 	if err != nil {
 		log.Fatal(err)
