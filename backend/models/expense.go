@@ -43,23 +43,18 @@ func (expense *Expense) SaveExpense() (*Expense, error) {
 
 func FilterExpenseByMonthAndYear(user_id int, month string, year string) ([]Expense, error) {
 	var expenses []Expense
+
+	query := DB.NewSelect().Model(&expenses).Relation("Category").
+		Where("expense.user_id = ?", user_id).
+		OrderExpr("expense.expense_date DESC")
+
 	if month != "" && year != "" {
-		err := DB.NewSelect().Model(&expenses).Relation("Category").
-			Where("user_id = ?", user_id).
-			Where("EXTRACT(YEAR FROM expense_date) = ?", year).
-			Where("EXTRACT(MONTH FROM expense_date) = ?", month).
-			OrderExpr("expense_date DESC").
-			Scan(ctx)
-		return expenses, err
+		query = query.Where("EXTRACT(YEAR FROM expense.expense_date) = ?", year).
+			Where("EXTRACT(MONTH FROM expense.expense_date) = ?", month)
 	} else if month == "" && year != "" {
-		err := DB.NewSelect().Model(&expenses).Relation("Category").
-			Where("user_id = ?", user_id).
-			Where("EXTRACT(YEAR FROM expense_date) = ?", year).
-			OrderExpr("expense_date DESC").
-			Scan(ctx)
-		return expenses, err
-	} else {
-		err := DB.NewSelect().Model(&expenses).Relation("Category").Where("user_id = ?", user_id).OrderExpr("expense_date DESC").Scan(ctx)
-		return expenses, err
+		query = query.Where("EXTRACT(YEAR FROM expense.expense_date) = ?", year)
 	}
+
+	err := query.Scan(ctx)
+	return expenses, err
 }
