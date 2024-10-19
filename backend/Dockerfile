@@ -7,6 +7,7 @@ WORKDIR /
 # Copy Go Modules and Install dependencies
 COPY go.mod .
 COPY go.sum .
+COPY .env .
 RUN go mod download
 
 # Copy the source code
