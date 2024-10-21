@@ -37,7 +37,7 @@ func AddNewCategory(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"status": "Successfully added new category!"})
+	c.JSON(201, gin.H{"status": "Successfully added new category!", "data": cat})
 }
 
 func ListAllCategories(c *gin.Context) {
