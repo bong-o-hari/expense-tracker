@@ -13,7 +13,7 @@ type User struct {
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
 	Username  string    `bun:"username,notnull" json:"username"`
 	Email     string    `bun:"email,notnull,unique" json:"email"`
-	Password  string    `bun:"password,null" json:"-"`
+	Password  string    `bun:"password" json:"-"`
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 	UpdatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"updatedAt"`
 
