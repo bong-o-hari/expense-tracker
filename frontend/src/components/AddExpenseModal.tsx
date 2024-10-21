@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface ExpenseModalProps {
@@ -33,6 +35,13 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   const [description, setDescription] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date()); // Set to today's date
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false); // State for custom category modal
+  const [newCategory, setNewCategory] = useState(''); // State for new category input
+  const [allCategories, setAllCategories] = useState(categories); // Store both default and custom categories
+
+  useEffect(() => {
+    setAllCategories(categories);
+  }, [categories]);
 
   const convertDateFormat = (date: Date) => {
     const day = date.getDate().toString().padStart(2, '0');
@@ -72,6 +81,47 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     }
   };
 
+  const handleAddCustomCategory = async () => {
+    if (newCategory.trim()) {
+      try {
+        // Make the API call to add the new category
+        const token = await AsyncStorage.getItem('@auth_token');
+        const response = await fetch(`${API_URL}admin/category/new`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            category_name: newCategory,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add category');
+        }
+
+        const newCategoryFromBackend = await response.json();
+        const newCategoryObj = newCategoryFromBackend.data
+
+        // Update the local categories list
+        setAllCategories([...allCategories, newCategoryObj]);
+
+        // Automatically select the newly added category
+        setCategoryId(newCategoryObj.id);
+
+        // Reset the input and close the custom category modal
+        setNewCategory('');
+        setShowCustomCategoryModal(false);
+      } catch (error) {
+        alert('Error adding category.');
+      }
+    } else {
+      alert('Please enter a valid category name');
+    }
+  };
+
+
   return (
     <Modal
       animationType="slide"
@@ -86,21 +136,29 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           {/* Category Picker */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Category:</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={categoryId}
-                onValueChange={(itemValue) => setCategoryId(itemValue)}
-                style={styles.picker}
+            <View style={styles.pickerRow}>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={categoryId}
+                  onValueChange={(itemValue) => setCategoryId(itemValue)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select a category" value={null} />
+                  {allCategories.map((category) => (
+                    <Picker.Item
+                      key={category.id}
+                      label={category.category_name}
+                      value={category.id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+              <Pressable
+                style={styles.addButton}
+                onPress={() => setShowCustomCategoryModal(true)}
               >
-                <Picker.Item label="Select a category" value={null} />
-                {categories.map((category) => (
-                  <Picker.Item
-                    key={category.id}
-                    label={category.category_name}
-                    value={category.id}
-                  />
-                ))}
-              </Picker>
+                <Text style={styles.addButtonText}>+ Add</Text>
+              </Pressable>
             </View>
           </View>
 
@@ -158,6 +216,41 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           </View>
         </View>
       </View>
+
+      {/* Custom Category Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showCustomCategoryModal}
+        onRequestClose={() => setShowCustomCategoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Add Custom Category</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter category name"
+              placeholderTextColor="#888"
+              value={newCategory}
+              onChangeText={setNewCategory}
+            />
+            <View style={styles.buttonContainer}>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={() => setShowCustomCategoryModal(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.submitButton}
+                onPress={handleAddCustomCategory}
+              >
+                <Text style={styles.buttonText}>Add Category</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };
@@ -201,36 +294,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   pickerContainer: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
   picker: {
     height: 60,
     width: '100%',
-    color: 'black'
+    color: 'black',
+  },
+  addButton: {
+    marginLeft: 10,
+    backgroundColor: '#4CAF50',
+    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 14,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    width: '100%',
   },
   cancelButton: {
-    backgroundColor: '#f44336',
-    padding: 10,
+    backgroundColor: 'gray',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 5,
-    marginRight: 10,
+    marginTop: 10,
   },
   submitButton: {
     backgroundColor: '#4CAF50',
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 5,
+    marginTop: 10,
   },
   buttonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
