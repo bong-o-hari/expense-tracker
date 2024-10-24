@@ -3,6 +3,7 @@ package migrations
 import (
 	"expensetracker/models"
 	"log"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -26,9 +27,19 @@ func RunMigrations() {
 		log.Fatalf("failed to create migration instance: %v", err)
 	}
 
+	// Check if migration directory exists
+	if _, err := os.Stat("./migrations"); os.IsNotExist(err) {
+		log.Println("Migrations directory does not exist, skipping migrations.")
+		return // Gracefully exit if the directory does not exist
+	}
+
 	// Apply migrations
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("failed to apply migrations: %v", err)
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			log.Println("No migrations to apply")
+			return // Gracefully exit if there are no changes
+		}
+		log.Printf("failed to apply migrations: %v\n", err)
 	}
 
 	log.Println("Migrations applied successfully")
