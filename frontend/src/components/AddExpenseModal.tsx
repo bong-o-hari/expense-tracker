@@ -8,20 +8,21 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL } from '@env';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { submitCategory } from '../Apis';
 
 interface ExpenseModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (expense: {
-    category_id: number;
+  onSubmit: (data: {
+    category_id?: string;
+    description?: string;
+    expense_date?: string;
     amount: number;
-    description: string;
-    expense_date: string;
+    source?: string;
+    income_date?: string;
   }) => void;
-  categories: { id: number; category_name: string }[];
+  categories: { id: string; category_name: string }[];
 }
 
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
@@ -30,14 +31,18 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   onSubmit,
   categories,
 }) => {
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [expenseDate, setExpenseDate] = useState(new Date()); // Set to today's date
+  const [source, setSource] = useState('');
+  const [expenseDate, setExpenseDate] = useState(new Date());
+  const [incomeDate, setIncomeDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false); // State for custom category modal
-  const [newCategory, setNewCategory] = useState(''); // State for new category input
-  const [allCategories, setAllCategories] = useState(categories); // Store both default and custom categories
+  const [showIncomeDatePicker, setShowIncomeDatePicker] = useState(false);
+  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [allCategories, setAllCategories] = useState(categories);
+  const [mode, setMode] = useState<'expense' | 'income'>('expense');
 
   useEffect(() => {
     setAllCategories(categories);
@@ -61,6 +66,13 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     }
   };
 
+  const handleIncomeDateChange = (event: any, selectedDate: Date | undefined) => {
+    setShowIncomeDatePicker(false);
+    if (selectedDate) {
+      setIncomeDate(selectedDate);
+    }
+  };
+
   const handleAddExpense = () => {
     if (categoryId && amount && description) {
       const formattedDate = convertDateFormat(expenseDate);
@@ -70,47 +82,45 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         description,
         expense_date: formattedDate,
       });
-      // Reset the fields after submission
-      setCategoryId(null);
-      setAmount('');
-      setDescription('');
-      setExpenseDate(new Date()); // Reset to today's date
-      onClose(); // Close the modal
+      resetFields();
     } else {
-      alert('Please fill in all fields');
+      alert('Please fill in all fields for the expense');
     }
+  };
+
+  const handleAddIncome = () => {
+    if (amount && source) {
+      const formattedDate = convertDateFormat(incomeDate);
+      onSubmit({
+        amount: parseFloat(amount),
+        source,
+        income_date: formattedDate,
+      });
+      resetFields();
+    } else {
+      alert('Please fill in all fields for the income');
+    }
+  };
+
+  const resetFields = () => {
+    setCategoryId(null);
+    setAmount('');
+    setDescription('');
+    setSource('');
+    setExpenseDate(new Date());
+    setIncomeDate(new Date());
+    onClose(); // Close the modal after submission
   };
 
   const handleAddCustomCategory = async () => {
     if (newCategory.trim()) {
       try {
-        // Make the API call to add the new category
-        const token = await AsyncStorage.getItem('@auth_token');
-        const response = await fetch(`${API_URL}admin/category/new`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            category_name: newCategory,
-          }),
-        });
+        const newCategoryFromBackend = await submitCategory(newCategory);
+        const newCategoryObj = newCategoryFromBackend.data;
 
-        if (!response.ok) {
-          throw new Error('Failed to add category');
-        }
-
-        const newCategoryFromBackend = await response.json();
-        const newCategoryObj = newCategoryFromBackend.data
-
-        // Update the local categories list
         setAllCategories([...allCategories, newCategoryObj]);
-
-        // Automatically select the newly added category
         setCategoryId(newCategoryObj.id);
 
-        // Reset the input and close the custom category modal
         setNewCategory('');
         setShowCustomCategoryModal(false);
       } catch (error) {
@@ -121,7 +131,6 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     }
   };
 
-
   return (
     <Modal
       animationType="slide"
@@ -131,89 +140,156 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Add Expense</Text>
+          {/* Switch between Add Expense and Add Income */}
+          <View style={styles.switchContainer}>
+            <Pressable
+              style={[styles.switchButton, mode === 'expense' && styles.activeButton]}
+              onPress={() => setMode('expense')}
+            >
+              <Text style={styles.switchText}>Add Expense</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.switchButton, mode === 'income' && styles.activeButton]}
+              onPress={() => setMode('income')}
+            >
+              <Text style={styles.switchText}>Add Income</Text>
+            </Pressable>
+          </View>
 
-          {/* Category Picker */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Category:</Text>
-            <View style={styles.pickerRow}>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={categoryId}
-                  onValueChange={(itemValue) => setCategoryId(itemValue)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Select a category" value={null} />
-                  {allCategories.map((category) => (
-                    <Picker.Item
-                      key={category.id}
-                      label={category.category_name}
-                      value={category.id}
-                    />
-                  ))}
-                </Picker>
+          {mode === 'expense' ? (
+            <>
+              {/* Category Picker */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Category:</Text>
+                <View style={styles.pickerRow}>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={categoryId}
+                      onValueChange={(itemValue) => setCategoryId(itemValue)}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select a category" value={null} />
+                      {allCategories.map((category) => (
+                        <Picker.Item
+                          key={category.id}
+                          label={category.category_name}
+                          value={category.id}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
+                  <Pressable
+                    style={styles.addButton}
+                    onPress={() => setShowCustomCategoryModal(true)}
+                  >
+                    <Text style={styles.addButtonText}>+ Add</Text>
+                  </Pressable>
+                </View>
               </View>
-              <Pressable
-                style={styles.addButton}
-                onPress={() => setShowCustomCategoryModal(true)}
-              >
-                <Text style={styles.addButtonText}>+ Add</Text>
-              </Pressable>
-            </View>
-          </View>
 
-          {/* Amount input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter amount"
-              placeholderTextColor="#888"
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={(value) => setAmount(value)}
-            />
-          </View>
+              {/* Amount input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Amount:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter amount"
+                  placeholderTextColor="#888"
+                  keyboardType="numeric"
+                  value={amount}
+                  onChangeText={(value) => setAmount(value)}
+                />
+              </View>
 
-          {/* Description input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Description:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter description"
-              placeholderTextColor="#888"
-              value={description}
-              onChangeText={(value) => setDescription(value)}
-            />
-          </View>
+              {/* Description input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Description:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter description"
+                  placeholderTextColor="#888"
+                  value={description}
+                  onChangeText={(value) => setDescription(value)}
+                />
+              </View>
 
-          {/* Expense Date Picker */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Expense Date:</Text>
-            <Pressable style={styles.input} onPress={handleShowDatePicker}>
-              <Text style={{ color: 'black' }}>
-                {expenseDate ? expenseDate.toLocaleDateString() : 'Select a date'}
-              </Text>
-            </Pressable>
-            {showDatePicker && (
-              <DateTimePicker
-                value={expenseDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            )}
-          </View>
+              {/* Expense Date Picker */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Expense Date:</Text>
+                <Pressable style={styles.input} onPress={handleShowDatePicker}>
+                  <Text style={{ color: 'black' }}>
+                    {expenseDate ? expenseDate.toLocaleDateString() : 'Select a date'}
+                  </Text>
+                </Pressable>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={expenseDate}
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                  />
+                )}
+              </View>
+            </>
+          ) : (
+            <>
+              {/* Amount input for Income */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Amount:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter income amount"
+                  placeholderTextColor="#888"
+                  keyboardType="numeric"
+                  value={amount}
+                  onChangeText={(value) => setAmount(value)}
+                />
+              </View>
 
-          {/* Action buttons */}
-          <View style={styles.buttonContainer}>
-            <Pressable style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.submitButton} onPress={handleAddExpense}>
-              <Text style={styles.buttonText}>Submit</Text>
-            </Pressable>
-          </View>
+              {/* Source input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Source:</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter income source"
+                  placeholderTextColor="#888"
+                  value={source}
+                  onChangeText={(value) => setSource(value)}
+                />
+              </View>
+
+              {/* Income Date Picker */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Income Date:</Text>
+                <Pressable style={styles.input} onPress={() => setShowIncomeDatePicker(true)}>
+                  <Text style={{ color: 'black' }}>
+                    {incomeDate ? incomeDate.toLocaleDateString() : 'Select a date'}
+                  </Text>
+                </Pressable>
+                {showIncomeDatePicker && (
+                  <DateTimePicker
+                    value={incomeDate}
+                    mode="date"
+                    display="default"
+                    onChange={handleIncomeDateChange}
+                  />
+                )}
+              </View>
+            </>
+          )}
+
+          {/* Submit button */}
+          <Pressable
+            style={styles.submitButton}
+            onPress={mode === 'expense' ? handleAddExpense : handleAddIncome}
+          >
+            <Text style={styles.submitButtonText}>
+              {mode === 'expense' ? 'Add Expense' : 'Add Income'}
+            </Text>
+          </Pressable>
+
+          <Pressable style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -226,28 +302,23 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Add Custom Category</Text>
+            <Text style={styles.label}>Add Custom Category:</Text>
             <TextInput
               style={styles.input}
               placeholder="Enter category name"
               placeholderTextColor="#888"
               value={newCategory}
-              onChangeText={setNewCategory}
+              onChangeText={(value) => setNewCategory(value)}
             />
-            <View style={styles.buttonContainer}>
-              <Pressable
-                style={styles.cancelButton}
-                onPress={() => setShowCustomCategoryModal(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={styles.submitButton}
-                onPress={handleAddCustomCategory}
-              >
-                <Text style={styles.buttonText}>Add Category</Text>
-              </Pressable>
-            </View>
+            <Pressable style={styles.submitButton} onPress={handleAddCustomCategory}>
+              <Text style={styles.submitButtonText}>Add Category</Text>
+            </Pressable>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setShowCustomCategoryModal(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -263,87 +334,103 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContainer: {
-    width: '80%',
     backgroundColor: 'white',
-    borderRadius: 10,
     padding: 20,
-    alignItems: 'center',
+    borderRadius: 10,
+    width: '90%',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: 'black'
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    marginBottom: 20,
+  },
+  switchButton: {
+    flex: 1,
+    padding: 10,
+    marginHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 5,
+    backgroundColor: '#ddd',
+  },
+  activeButton: {
+    backgroundColor: '#2196F3',
+  },
+  switchText: {
+    fontSize: 16,
+    color: '#fff',
   },
   inputContainer: {
-    width: '100%',
     marginBottom: 15,
   },
   label: {
-    fontSize: 16,
     marginBottom: 5,
-    color: 'gray'
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'black',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
+    backgroundColor: '#f2f2f2',
     padding: 10,
-    width: '100%',
+    borderRadius: 5,
     color: 'black',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   pickerContainer: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    overflow: 'hidden',
   },
   picker: {
-    height: 60,
-    width: '100%',
-    color: 'black',
+    height: 50,
+    backgroundColor: '#f2f2f2',
+    color: 'grey',
   },
   addButton: {
     marginLeft: 10,
-    backgroundColor: '#4CAF50',
+    padding: 10,
+    backgroundColor: '#2196F3',
     borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
   },
   addButtonText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  cancelButton: {
-    backgroundColor: 'gray',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginTop: 10,
+    color: '#fff',
   },
   submitButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: '#2196F3',
+    padding: 15,
     borderRadius: 5,
+    alignItems: 'center',
     marginTop: 10,
   },
-  buttonText: {
-    color: 'white',
+  submitButtonText: {
+    color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    backgroundColor: '#f2f2f2',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  closeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  customCategoryModalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
 });
 
