@@ -1,31 +1,40 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, RefreshControl, StyleSheet, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import ExpenseItem from '../components/ExpenseComponent';
 import ExpenseModal from '../components/AddExpenseModal';
-import { fetchExpenses, fetchCategories, submitExpense, deleteExpense } from '../Apis';
+import { fetchExpenses, fetchCategories, fetchIncomes, submitIncome, submitExpense } from '../Apis';
 
 interface Expense {
-  id: number;
+  id: string;
   amount: number;
   description: string;
-  expense_date: string;
-  category: {
-    id: number;
-    category_name: string;
-  };
+  expense_date: string; // Date format should be adjusted as necessary
+  category_id: number; // Corresponds to category ID
+}
+
+interface Income {
+  id: string;
+  amount: number;
+  source: string;
+  income_date: string; // Date format should be adjusted as necessary
 }
 
 interface Category {
-  id: number;
+  id: string;
   category_name: string;
 }
 
+// Type guard to check if the item is an Income
+const isIncome = (item: Expense | Income): item is Income => {
+  return (item as Income).source !== undefined;
+};
+
 const HomeScreen: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [transactions, setTransactions] = useState<(Expense | Income)[]>([]);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newExpense, setNewExpense] = useState({ category_id: 0, amount: 0, description: '', expense_date: '' });
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -50,10 +59,26 @@ const HomeScreen: React.FC = () => {
     return { label: year.toString(), value: year.toString() };
   });
 
+  const formatDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return new Intl.DateTimeFormat('en-US', { weekday: 'short', day: '2-digit', year: 'numeric' }).format(date);
+  };
+
+
   useEffect(() => {
-    const loadExpenses = async () => {
-      const response = await fetchExpenses(selectedMonth, selectedYear);
-      setExpenses(response.data);
+    const loadTransactions = async () => {
+      const expensesResponse = await fetchExpenses(selectedMonth, selectedYear);
+      const incomesResponse = await fetchIncomes(selectedMonth, selectedYear);
+
+      // Handle potential null values
+      const sumExpense = expensesResponse.total_expense;
+      const expensesData = expensesResponse.data ?? [];
+      const sumIncome = incomesResponse.total_income;
+      const incomesData = incomesResponse.data ?? [];
+
+      setTotalExpense(sumExpense)
+      setTotalIncome(sumIncome)
+      setTransactions([...expensesData, ...incomesData]);
     };
 
     const loadCategories = async () => {
@@ -61,46 +86,54 @@ const HomeScreen: React.FC = () => {
       setCategories(response.data);
     };
 
-    loadExpenses();
+    loadTransactions();
     loadCategories();
   }, [selectedMonth, selectedYear]);
 
-  useEffect(() => {
-    const submitExpenseOnChange = async () => {
-      if (newExpense.category_id != 0) {
-        await submitExpense(newExpense);
-        const response = await fetchExpenses(selectedMonth, selectedYear);
-        setExpenses(response.data);
-      }
-    };
-    submitExpenseOnChange();
-  }, [newExpense]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchExpenses(selectedMonth, selectedYear).then((expenses) => {
-      setExpenses(expenses.data);
-      setRefreshing(false);
-    });
+
+    // Fetch expenses and incomes
+    Promise.all([
+      fetchExpenses(selectedMonth, selectedYear),
+      fetchIncomes(selectedMonth, selectedYear),
+    ])
+      .then(([expensesResponse, incomesResponse]) => {
+        // Handle potential null values
+        const sumExpense = expensesResponse.total_expense;
+        const expensesData = expensesResponse.data ?? [];
+        const sumIncome = incomesResponse.total_income;
+        const incomesData = incomesResponse.data ?? [];
+
+        setTotalExpense(sumExpense)
+        setTotalIncome(sumIncome)
+        setTransactions([...expensesData, ...incomesData]);
+      })
+      .catch((error) => {
+        console.error("Error fetching transactions:", error);
+      })
+      .finally(() => {
+        setRefreshing(false);
+      });
   }, [selectedMonth, selectedYear]);
 
-  const handleAddExpense = async (expense: { category_id: number, amount: number, description: string, expense_date: string }) => {
-    try {
-      setNewExpense(expense);
-      setModalVisible(false);
-    } catch (error) {
-      console.error("Error adding expense:", error);
+  const handleSubmit = async (data: {
+    amount: number;
+    description?: string; // Only for expenses
+    categoryId?: string; // Only for expenses
+    expense_date?: string;
+    source?: string; // Only for incomes
+    income_date?: string; // Only for incomes
+  }) => {
+    if (data.source) {
+      // Handle income submission
+      const response = await submitIncome(data);
+    } else {
+      // Handle expense submission
+      const response = await submitExpense(data);
     }
-  };
-
-  const handleDeleteExpense = async (expenseId: number) => {
-    try {
-      await deleteExpense(expenseId);
-      const response = await fetchExpenses(selectedMonth, selectedYear);
-      setExpenses(response.data);
-    } catch (err) {
-      console.error(err);
-    }
+    setModalVisible(false);
+    onRefresh(); // Refresh after submission
   };
 
   return (
@@ -129,26 +162,77 @@ const HomeScreen: React.FC = () => {
             ))}
           </Picker>
         </View>
-
-        {/* Add Expense Button */}
-        <TouchableOpacity onPress={() => setModalVisible(true)}>
-          <Text style={{ fontSize: 40, fontWeight: 'bold', color: 'gray' }}>+</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Expenses List */}
+      <View style={styles.summaryContainer}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryTitle}>EXPENSE</Text>
+          <Text style={styles.expenseAmount}>{totalExpense}</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryTitle}>INCOME</Text>
+          <Text style={styles.incomeAmount}>{totalIncome}</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryTitle}>TOTAL</Text>
+          <Text
+            style={[
+              styles.totalAmount,
+              { color: (totalIncome - totalExpense) >= 0 ? 'green' : 'red' }
+            ]}
+          >
+            {totalIncome - totalExpense}
+          </Text>
+        </View>
+      </View>
+
       <FlatList
-        data={expenses}
-        renderItem={({ item }) => <ExpenseItem expense={item} />}
+        data={transactions}
+        ListHeaderComponent={() => (
+          <Text style={styles.sectionTitle}>Transactions</Text>
+        )}
+        renderItem={({ item }) => (
+          <View style={styles.itemContainer}>
+            <View style={styles.rowContainer}>
+              <View style={styles.leftColumn}>
+                {isIncome(item) ? (
+                  <>
+                    <Text style={styles.itemText}>Received from {item.source}</Text>
+                    <Text style={styles.dateText}>{formatDate(item.income_date)}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.itemText}>Spent on {item.description}</Text>
+                    <Text style={styles.dateText}>{formatDate(item.expense_date)}</Text>
+                  </>
+                )}
+              </View>
+
+              <View style={styles.rightColumn}>
+                <Text style={isIncome(item) ? styles.incomeAmount : styles.expenseAmount}>
+                  {isIncome(item) ? `+${item.amount}` : `-${item.amount}`}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       />
 
-      {/* Add Expense Modal */}
+
+      {/* Add Expense/Income Button */}
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => setModalVisible(true)}>
+        <Text style={styles.addButtonText}>Add Expense/Income</Text>
+      </TouchableOpacity>
+
+      {/* Add Expense/Income Modal */}
       <ExpenseModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSubmit={handleAddExpense}
+        onSubmit={handleSubmit}
         categories={categories}
       />
     </View>
@@ -173,6 +257,81 @@ const styles = StyleSheet.create({
     width: 150,
     color: 'purple',
     backgroundColor: '#EAEAEA',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    color: 'black',
+  },
+  itemContainer: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  itemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  incomeAmount: {
+    color: 'green',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  expenseAmount: {
+    color: 'red',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  totalAmount: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  addButton: {
+    backgroundColor: 'purple',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  summaryItem: {
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  dateText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
 });
 
