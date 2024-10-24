@@ -11,18 +11,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"google.golang.org/api/idtoken"
 )
 
-func GenerateToken(user_id int) (string, error) {
+func GenerateToken(user_id uuid.UUID) (string, error) {
 	tokenLifespan, err := strconv.Atoi(os.Getenv("TOKEN_HOUR_LIFESPAN"))
 
 	if err != nil {
+		log.Println(err)
 		return "", err
 	}
 
 	claims := jwt.MapClaims{}
-	claims["user_id"] = user_id
+	claims["user_id"] = user_id.String()
 	claims["authorized"] = true
 	claims["exp"] = time.Now().Add(time.Hour * time.Duration(tokenLifespan)).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -40,6 +42,7 @@ func TokenValid(c *gin.Context) error {
 		return []byte(os.Getenv("API_SECRET")), nil
 	})
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	return nil
@@ -58,29 +61,37 @@ func ExtractToken(c *gin.Context) string {
 	return ""
 }
 
-func ExtractTokenID(c *gin.Context) (int, error) {
+func ExtractTokenID(c *gin.Context) (uuid.UUID, error) {
 	tokenString := ExtractToken(c)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return uuid.Nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(os.Getenv("API_SECRET")), nil
 	})
 
 	if err != nil {
-		return 0, err
+		log.Println(err)
+		return uuid.Nil, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if ok && token.Valid {
-		uid, err := strconv.ParseUint(fmt.Sprintf("%.0f", claims["user_id"]), 10, 32)
-		if err != nil {
-			return 0, err
+		userIDString, ok := claims["user_id"].(string)
+		if !ok {
+			return uuid.Nil, fmt.Errorf("user_id is not a valid string")
 		}
-		return int(uid), nil
+
+		userID, err := uuid.Parse(userIDString)
+		if err != nil {
+			log.Println(err)
+			return uuid.Nil, fmt.Errorf("invalid UUID format: %v", err)
+		}
+
+		return userID, nil
 	}
 
-	return 0, nil
+	return uuid.Nil, nil
 }
 
 func VerifyGoogleIDToken(idToken string) (*idtoken.Payload, error) {
