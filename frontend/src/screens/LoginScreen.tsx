@@ -8,7 +8,7 @@ interface Props {
 	navigation: {
 		navigate: (screen: string) => void;
 	};
-};
+}
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
 	const [email, setEmail] = useState<string>('');
