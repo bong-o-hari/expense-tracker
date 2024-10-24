@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type RegisterInput struct {
@@ -50,6 +51,7 @@ func RegisterUser(c *gin.Context) {
 	// create token at register
 	token, err := utils.LoginCheck(u.Email, input.Password)
 	if err != nil {
+		log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -78,6 +80,7 @@ func LoginUser(c *gin.Context) {
 	token, err := utils.LoginCheck(u.Email, u.Password)
 
 	if err != nil {
+		log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or Password incorrect."})
 		return
 	}
@@ -110,15 +113,15 @@ func GoogleLogin(c *gin.Context) {
 	email := tokenInfo.Claims["email"].(string)
 	name := tokenInfo.Claims["name"].(string)
 
-	user, err := models.GetOrCreateUser(email, name, 0)
+	user, err := models.GetOrCreateUser(email, name, uuid.Nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
 	}
 
 	// Issue JWT token (implement this as per your current JWT strategy)
-	tokenString, err := utils.GenerateToken(int(user.ID))
+	tokenString, err := utils.GenerateToken(user.ID)
 	if err != nil {
+		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -130,12 +133,14 @@ func GoogleLogin(c *gin.Context) {
 func CurrentUser(c *gin.Context) {
 	user_id, err := utils.ExtractTokenID(c)
 	if err != nil {
+		log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	u, err := models.GetOrCreateUser("", "", user_id)
 	if err != nil {
+		log.Println(err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
