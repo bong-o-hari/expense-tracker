@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -15,6 +16,15 @@ import (
 var DB *bun.DB
 var ctx = context.Background()
 
+func EnableUUIDExtension() error {
+	ctx := context.Background()
+	_, err := DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"", ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create uuid-ossp extension: %w", err)
+	}
+	return nil
+}
+
 func ConnectDatabase() {
 	err := godotenv.Load(".env")
 
@@ -25,12 +35,16 @@ func ConnectDatabase() {
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(os.Getenv("DSN"))))
 	DB = bun.NewDB(sqldb, pgdialect.New())
 
+	// Enabling UUID
+	EnableUUIDExtension()
 	// reflecting User to DB
 	CreateUserTable()
 	// reflecting Category to DB
 	CreateAndPrefillCategoryTable()
 	// reflecting Expense to DB
 	CreateExpenseTable()
+	// reflecting Income to DB
+	CreateIncomeTable()
 
 	// ping db to check active connection
 	err = DB.Ping()

@@ -5,15 +5,16 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
 
 type Category struct {
 	bun.BaseModel `bun:"table:categories"`
 
-	ID           int64     `bun:"id,pk,autoincrement" json:"id"`
+	ID           uuid.UUID `bun:"type:uuid,pk,default:uuid_generate_v4()" json:"id"`
 	CategoryName string    `bun:"categoryname,notnull" json:"category_name"`
-	UserID       int64     `bun:"user_id,notnull,default:0" json:"user_id"`
+	UserID       uuid.UUID `bun:"type:uuid,notnull" json:"user_id"`
 	CreatedAt    time.Time `bun:",nullzero,notnull,default:current_timestamp" json:"createdAt"`
 
 	// Relations
@@ -25,6 +26,7 @@ func (cat *Category) SaveCategory() (*Category, error) {
 	_, err := DB.NewInsert().Model(cat).Exec(ctx)
 
 	if err != nil {
+		log.Println(err)
 		return &Category{}, err
 	}
 	return cat, nil
@@ -73,9 +75,10 @@ func CreateAndPrefillCategoryTable() {
 	}
 }
 
-func ListCategories(user_id int) ([]Category, error) {
+func ListCategories(user_id uuid.UUID) ([]Category, error) {
 	var cat []Category
-	err := DB.NewSelect().Model(&cat).Where("user_id = ?", user_id).WhereOr("user_id = ?", 0).Scan(ctx)
+	defUserId, _ := uuid.Parse("00000000-0000-0000-0000-000000000000")
+	err := DB.NewSelect().Model(&cat).Where("user_id = ?", user_id).WhereOr("user_id = ?", defUserId).Scan(ctx)
 
 	if err != nil {
 		log.Println("Error fetching categories", err)

@@ -4,13 +4,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 )
 
 type User struct {
 	bun.BaseModel `bun:"table:users"`
 
-	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
+	ID        uuid.UUID `bun:"type:uuid,pk,default:uuid_generate_v4()" json:"id"`
 	Username  string    `bun:"username,notnull" json:"username"`
 	Email     string    `bun:"email,notnull,unique" json:"email"`
 	Password  string    `bun:"password" json:"-"`
@@ -26,6 +27,7 @@ func (u *User) SaveUser() (*User, error) {
 	_, err := DB.NewInsert().Model(u).Exec(ctx)
 
 	if err != nil {
+		log.Println(err)
 		return &User{}, err
 	}
 	return u, nil
@@ -39,20 +41,21 @@ func CreateUserTable() {
 	}
 }
 
-func GetOrCreateUser(email string, name string, user_id int) (User, error) {
+func GetOrCreateUser(email string, name string, user_id uuid.UUID) (User, error) {
 	var u User
 
 	if email != "" {
 		err := DB.NewSelect().Model(&u).Where("email = ?", email).Scan(ctx)
 		if err != nil {
+			log.Println("User Not Found, creating new", err)
 			// User not found, create new user
 			u.Username = name
 			u.Email = email
 			u.SaveUser()
-			return u, err
+			return u, nil
 		}
-		return u, err
-	} else if user_id != 0 {
+		return u, nil
+	} else if user_id != uuid.Nil {
 		err := DB.NewSelect().Model(&u).Where("id = ?", user_id).Scan(ctx)
 		if err != nil {
 			log.Println("Failed to fetch user.", err)
